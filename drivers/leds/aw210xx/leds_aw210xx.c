@@ -911,6 +911,50 @@ void run_alwayson_effect(struct aw210xx *aw210xx){
 	}
 }
 
+void run_horseracelamp_effect(struct aw210xx *aw210xx){
+
+	struct aw210xx *aw210xx_id1 = aw210xx_g_chip[1][0];
+	struct aw210xx *led = aw210xx_g_chip[0][0];
+	int i =0;
+	// AW_ERR("zsf effect_state.data[AW210XX_LED_HORSE_RACE_LAMP] = %d, last_run_effect = %d", effect_state.data[AW210XX_LED_HORSE_RACE_LAMP], last_run_effect);
+	if( (effect_state.data[AW210XX_LED_HORSE_RACE_LAMP] == 1) || (last_run_effect != AW210XX_LED_HORSE_RACE_LAMP)) {
+		effect_state.data[AW210XX_LED_HORSE_RACE_LAMP] = 0;
+		for (i=0; i<3; i++)
+		{
+			AW_ERR(" new_always_on_color = %d,%d,%d,%d,%d,%d,%d,%d,%d",new_always_on_color[i][0],new_always_on_color[i][1],new_always_on_color[i][2],new_always_on_color[i][3],
+			new_always_on_color[i][4],new_always_on_color[i][5],new_always_on_color[i][6],new_always_on_color[i][7],new_always_on_color[i][8]);
+			AW_ERR(" frame entry \n");
+		}
+
+		brightness_sbmd_setup(BR_RESOLUTION_8BIT , false);
+		for(i=0;i<3;i++){
+			aw210xx_i2c_write(led, AW210XX_REG_BR00L + 2*i, new_always_on_color[i][8]*brightness_ratio/255);
+			aw210xx_i2c_write(led, AW210XX_REG_BR03L + 2*i, new_always_on_color[i][8]*brightness_ratio/255);
+			aw210xx_i2c_write(led, AW210XX_REG_BR06L + 2*i, new_always_on_color[i][8]*brightness_ratio/255);
+			aw210xx_i2c_write(led, AW210XX_REG_BR09L + 2*i, new_always_on_color[i][8]*brightness_ratio/255);
+
+			aw210xx_i2c_write(aw210xx_id1, AW210XX_REG_BR00L + 2*i, new_always_on_color[i][8]);
+			aw210xx_i2c_write(aw210xx_id1, AW210XX_REG_BR03L + 2*i, new_always_on_color[i][8]);
+			aw210xx_i2c_write(aw210xx_id1, AW210XX_REG_BR06L + 2*i, new_always_on_color[i][8]);
+			aw210xx_i2c_write(aw210xx_id1, AW210XX_REG_BR09L + 2*i, new_always_on_color[i][8]);
+
+			aw210xx_i2c_write(led, AW210XX_REG_SL00 + i, new_always_on_color[i][0]);
+			aw210xx_i2c_write(led, AW210XX_REG_SL03 + i, new_always_on_color[i][1]);
+			aw210xx_i2c_write(led, AW210XX_REG_SL06 + i, new_always_on_color[i][2]);
+			aw210xx_i2c_write(led, AW210XX_REG_SL09 + i, new_always_on_color[i][3]);
+
+			aw210xx_i2c_write(aw210xx_id1, AW210XX_REG_SL00 + i, new_always_on_color[i][4]);
+			aw210xx_i2c_write(aw210xx_id1, AW210XX_REG_SL03 + i, new_always_on_color[i][5]);
+			aw210xx_i2c_write(aw210xx_id1, AW210XX_REG_SL06 + i, new_always_on_color[i][6]);
+			aw210xx_i2c_write(aw210xx_id1, AW210XX_REG_SL09 + i, new_always_on_color[i][7]);
+		}
+
+		aw210xx_update(led);
+		aw210xx_update(aw210xx_id1);
+	}
+}
+
+
 void run_music_effect(struct aw210xx *aw210xx){
 
 	struct aw210xx *aw210xx_id1 = aw210xx_g_chip[1][0];
@@ -1222,6 +1266,12 @@ void run_effect(struct aw210xx *aw210xx)
 			usleep_range(20000,20500);
 			continue;
 		}
+		else if (effect_state.state[AW210XX_LED_HORSE_RACE_LAMP] != 0){
+			run_horseracelamp_effect(aw210xx);
+			last_run_effect = AW210XX_LED_HORSE_RACE_LAMP;
+			usleep_range(20000,20500);
+			continue;
+		}
 		else if (effect_state.state[AW210XX_LED_INCALL_MODE] != 0){
 			if(last_run_effect == AW210XX_LED_NOTIFY_MODE ){
 				reset_led();
@@ -1356,7 +1406,8 @@ static void aw210xx_brightness(struct aw210xx *led)
 		case AW210XX_LED_GAMEMODE:
 		case AW210XX_LED_NEW_ALWAYSON:
 		case AW210XX_LED_MUSICMODE:
-			AW_ERR(" initial effect mode %d enter \n",led->pdata->led_mode );
+		case AW210XX_LED_HORSE_RACE_LAMP:
+			AW_ERR("initial effect mode %d enter \n",led->pdata->led_mode );
 			led->br_res = BR_RESOLUTION_8BIT;
 			aw210xx_br_res_set(led);
 			/* sbmd enable */
@@ -1369,12 +1420,12 @@ static void aw210xx_brightness(struct aw210xx *led)
 			}
 			/*light effect*/
 			run_effect(led);
-			AW_ERR(" effect mode %d exit \n", led->pdata->led_mode );
-			break;
+			AW_ERR("effect mode %d exit \n", led->pdata->led_mode );
+			goto out;
 		default:
 			break;
 	}
-	
+
 #if 0
 	/*aw210xx led music mode set up*/
 	if (led->pdata->led_mode == AW210XX_LED_MUSICMODE ) {
@@ -1703,7 +1754,6 @@ out:
 static void aw210_work_func(struct work_struct *aw210_work)
 {
 	u8 ret = 0,val = 0;
-	int i = 0;
 	struct aw210xx *led = container_of(aw210_work, struct aw210xx,aw210_led_work.work);
 
 	AW_LOG("aw210_work_func enter\n");
@@ -1718,14 +1768,7 @@ static void aw210_work_func(struct work_struct *aw210_work)
 			if (ret) {
 				dev_err(&led->i2c->dev, "%s reset failed :[%d]\n",__func__,ret);
 			}
-			for (i = 0; i < 3; i++) {
-				aw210xx_brightness(aw210xx_g_chip[0][i]);
-			}
-			if (led_default->led_groups_num == 8) {
-				for (i = 0; i < 3; i++) {
-					aw210xx_brightness(aw210xx_g_chip[1][i]);
-				}
-			}
+			aw210xx_brightness(aw210xx_g_chip[0][0]);
 		} else {
 			led_default->esd_flag = false;
 		}
@@ -2752,6 +2795,35 @@ void store_effect_color_and_brightness(char *tmp_buf)
 				}
 			}
 			break;
+		case HORSERACELAMP_EFFECT:
+			effect_state.data[AW210XX_LED_HORSE_RACE_LAMP] = 1;
+			new_always_on_color[0][8] = (br_rgb >> 16) & 0xff; new_always_on_color[1][8]= (br_rgb >> 8) & 0xff; new_always_on_color[2][8] = br_rgb & 0xff;
+			new_always_on_color[0][led_order[0]] = (rgb >> 16) & 0xff;
+			new_always_on_color[1][led_order[0]] = (rgb >>8) & 0xff;
+			new_always_on_color[2][led_order[0]] = rgb & 0xff;
+			for(i=1;i<8;i++)
+			{
+				str = strsep(&tmp_buf, delim);
+				if (str == NULL) {
+					AW_ERR("error in parsing 1.1");
+					return;
+				}
+				ret = kstrtoul(str, 16, &data);
+				if (ret) {
+					AW_ERR("error in parsing 1.2");
+					return;
+				}
+				rgb = data;
+				if(led_order[i] <8) {
+					new_always_on_color[0][led_order[i]] = (rgb >> 16) & 0xff;
+					new_always_on_color[1][led_order[i]] = (rgb >>8) & 0xff;
+					new_always_on_color[2][led_order[i]] = rgb & 0xff;
+				}
+				else {
+					AW_ERR("led_order[i]  is out of index");
+				}
+			}
+			break;
 		case FLOW_EFFECT:
 			effect_state.data[AW210XX_LED_FLOW_CTL_MODE] = 1;
 			flow_color[0][8] = (br_rgb >> 16) & 0xff; flow_color[1][8]= (br_rgb >> 8) & 0xff; flow_color[2][8] = br_rgb & 0xff;
@@ -3701,6 +3773,9 @@ static int aw210xx_led_change_mode(struct aw210xx *led,
 		case AW210XX_LED_GAMEMODE:
 			led->pdata->led_mode = AW210XX_LED_GAMEMODE;
 			break;
+		case AW210XX_LED_HORSE_RACE_LAMP:
+			led->pdata->led_mode = AW210XX_LED_HORSE_RACE_LAMP;
+			break;
 		default:
 			led->pdata->led_mode = AW210XX_LED_NONE;
 			break;
@@ -4011,6 +4086,27 @@ static void aw210xx_led_game_deactivate(struct led_classdev *cdev)
 	AW_LOG("[%d]: %s\n", led->id, __func__);
 }
 
+static int aw210xx_led_horse_race_lamp_activate(struct led_classdev *cdev)
+{
+	int ret = 0;
+	struct aw210xx *led = container_of(cdev, struct aw210xx, cdev);
+
+	AW_LOG("[%d]: individual_ctl_breath activate",led->id);
+
+	ret = aw210xx_led_change_mode(led, AW210XX_LED_HORSE_RACE_LAMP);
+	if (ret < 0) {
+		dev_err(led->cdev.dev, "%s: aw210xx_led_change_mode fail\n", __func__);
+		return ret;
+	}
+	return ret;
+}
+
+static void aw210xx_led_horse_race_lamp_deactivate(struct led_classdev *cdev)
+{
+	struct aw210xx *led = container_of(cdev, struct aw210xx, cdev);
+	aw210xx_led_change_mode(led, AW210XX_LED_NONE);
+	AW_LOG("[%d]: %s\n", led->id, __func__);
+}
 
 static struct led_trigger aw210xx_led_trigger[LEDMODE_MAX_NUM] = {
 	{
@@ -4090,6 +4186,11 @@ static struct led_trigger aw210xx_led_trigger[LEDMODE_MAX_NUM] = {
 		.activate = aw210xx_led_game_activate,
 		.deactivate = aw210xx_led_game_deactivate,
 //		.groups = aw210xx_led_music_mode_groups,
+	},
+	{
+		.name = "horse_race_lamp",
+		.activate = aw210xx_led_horse_race_lamp_activate,
+		.deactivate = aw210xx_led_horse_race_lamp_deactivate,
 	},
 };
 

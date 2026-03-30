@@ -157,6 +157,10 @@ def _generate_ddk_target(
             "//vendor/oplus/kernel/cpu:cpufreq_bouncing",
             "//vendor/oplus/kernel/cpu:oplus_bsp_task_overload",
             "//vendor/oplus/kernel/storage:oplus_wq_dynamic_priority",
+            "//vendor/oplus/kernel/boot:oplus_bsp_bootmode",
+            "//vendor/oplus/kernel/boot:oplus_ftm_mode",
+            "//vendor/oplus/kernel/boot:oplusboot",
+            "//vendor/oplus/kernel/boot:oplus_charger_present",
         ],
         visibility = ["//visibility:public"],
     )

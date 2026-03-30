@@ -368,6 +368,7 @@ def register_modules(registry):
         deps = [
             # do not sort
             "drivers/firmware/qcom/qcom-scm",
+            "drivers/soc/qcom/cpu_phys_log_map",
         ],
     )
 
@@ -860,7 +861,9 @@ def register_modules(registry):
         deps = [
             # do not sort
             "drivers/soc/qcom/qcom_cpucp.c",
+            "drivers/soc/qcom/dcvs/qcom_scmi_client",
             "kernel/sched/walt/sched-walt",
+	    "drivers/soc/qcom/cpu_phys_log_map",
         ],
     )
 

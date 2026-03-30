@@ -3,7 +3,7 @@
  * Copyright (c) 2015, Sony Mobile Communications Inc.
  * Copyright (c) 2013, The Linux Foundation. All rights reserved.
  * Copyright (c) 2020, Linaro Ltd.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022,2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #define pr_fmt(fmt) "qrtr: %s(): " fmt, __func__
@@ -108,15 +108,22 @@ int qrtr_get_service_id(unsigned int node_id, unsigned int port_id)
 	struct qrtr_server *srv;
 	struct qrtr_node *node;
 	unsigned long index;
+	unsigned int svc_id;
+	unsigned long flags;
 
 	node = xa_load(&nodes, node_id);
 	if (!node)
 		return -EINVAL;
 
+	xa_lock_irqsave(&node->servers, flags);
 	xa_for_each(&node->servers, index, srv) {
-		if (srv->node == node_id && srv->port == port_id)
-			return srv->service;
+		if (srv->node == node_id && srv->port == port_id) {
+			svc_id = srv->service;
+			xa_unlock_irqrestore(&node->servers, flags);
+			return svc_id;
+		}
 	}
+	xa_unlock_irqrestore(&node->servers, flags);
 
 	return -EINVAL;
 }
@@ -128,15 +135,22 @@ int qrtr_get_service_instance_id(unsigned int node_id, unsigned int port_id)
 	struct qrtr_server *srv;
 	struct qrtr_node *node;
 	unsigned long index;
+	unsigned int instance_id;
+	unsigned long flags;
 
 	node = xa_load(&nodes, node_id);
 	if (!node)
 		return -EINVAL;
 
+	xa_lock_irqsave(&node->servers, flags);
 	xa_for_each(&node->servers, index, srv) {
-		if (srv->node == node_id && srv->port == port_id)
-			return srv->instance;
+		if (srv->node == node_id && srv->port == port_id) {
+			instance_id = srv->instance;
+			xa_unlock_irqrestore(&node->servers, flags);
+			return instance_id;
+		}
 	}
+	xa_unlock_irqrestore(&node->servers, flags);
 
 	return -EINVAL;
 }
@@ -302,7 +316,7 @@ static struct qrtr_server *server_add(unsigned int service,
 		goto err;
 
 	/* Delete the old server on the same port */
-	old = xa_store(&node->servers, port, srv, GFP_KERNEL);
+	old = xa_store_irq(&node->servers, port, srv, GFP_KERNEL);
 	if (old) {
 		if (xa_is_err(old)) {
 			pr_err("failed to add server [0x%x:0x%x] ret:%d\n",
@@ -336,7 +350,7 @@ static int server_del(struct qrtr_node *node, unsigned int port, bool bcast)
 	if (!srv)
 		return 0;
 
-	xa_erase(&node->servers, port);
+	xa_erase_irq(&node->servers, port);
 
 	/* Broadcast the removal of local servers */
 	if (srv->node == qrtr_ns.local_node && bcast)
@@ -353,7 +367,9 @@ static int server_del(struct qrtr_node *node, unsigned int port, bool bcast)
 		lookup_notify(&lookup->sq, srv, false);
 	}
 
+	xa_lock_irq(&node->servers);
 	kfree(srv);
+	xa_unlock_irq(&node->servers);
 
 	return 0;
 }

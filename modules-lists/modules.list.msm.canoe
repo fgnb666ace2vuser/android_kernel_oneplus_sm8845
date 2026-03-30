@@ -9,6 +9,7 @@ camcc-canoe.ko
 clk-dummy.ko
 clk-qcom.ko
 clk-rpmh.ko
+cpu_phys_log_map.ko
 midpoint.ko
 clk-scmi.ko
 sched-walt.ko
@@ -131,3 +132,8 @@ cpufreq_bouncing.ko
 oplus_bsp_task_overload.ko
 i2c-msm-geni.ko
 msm_gpi.ko
+oplus_bsp_aizerofs.ko
+oplus_bsp_bootmode.ko
+oplus_ftm_mode.ko
+oplusboot.ko
+oplus_charger_present.ko
