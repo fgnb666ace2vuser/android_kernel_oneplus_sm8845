@@ -904,6 +904,10 @@ static int msm_ssphy_qmp_set_suspend(struct usb_phy *uphy, int suspend)
 			msm_ssusb_qmp_enable_autonomous(phy, 0);
 		}
 
+		/* Reset phy mode to COMBO if DP is connected */
+		if (phy->phy_type == USB3_AND_DP &&
+			(uphy->flags & PHY_USB_DP_CONCURRENT_MODE))
+			msm_ssphy_qmp_setmode(phy, USB3_DP_COMBO_MODE);
 		/* Make sure that above write completed with PHY */
 		wmb();
 

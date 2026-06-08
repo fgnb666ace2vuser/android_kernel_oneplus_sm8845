@@ -5905,6 +5905,8 @@ static void dwc3_msm_set_dp_only_params(struct dwc3_msm *mdwc)
 	phy_set_mode_ext(mdwc->usb3_phy, PHY_MODE_INVALID, DP_4_LANE);
 }
 
+static int dwc3_msm_host_ss_powerup(struct dwc3_msm *mdwc);
+
 int dwc3_msm_set_dp_mode(struct device *dev, bool dp_connected, int lanes)
 {
 	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
@@ -5976,6 +5978,7 @@ int dwc3_msm_set_dp_mode(struct device *dev, bool dp_connected, int lanes)
 		pm_runtime_get_sync(&mdwc->dwc3->dev);
 		dwc3_msm_set_usbphy_flags(mdwc->ss_phy, PHY_USB_DP_CONCURRENT_MODE);
 		phy_set_mode_ext(mdwc->usb3_phy, PHY_MODE_USB_HOST, DP_2_LANE);
+		dwc3_msm_host_ss_powerup(mdwc);
 		pm_runtime_put_sync(&mdwc->dwc3->dev);
 		dbg_log_string("Set DP 2 lanes: success, refcnt:%d\n", mdwc->refcnt_dp_usb);
 		return 0;
@@ -7052,6 +7055,7 @@ static int dwc3_msm_host_ss_powerup(struct dwc3_msm *mdwc)
 		return 0;
 	}
 
+	clk_set_rate(mdwc->core_clk, mdwc->core_clk_rate);
 	usb_phy_set_suspend(mdwc->ss_phy, 0);
 	usb_phy_notify_connect(mdwc->ss_phy,
 					USB_SPEED_SUPER);
