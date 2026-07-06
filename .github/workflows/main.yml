@@ -1,0 +1,23 @@
+name: Build‑Kernel
+on:
+  push:
+    branches: [ oneplus/sm8845_b_16.0.0_ace_6t ]
+
+jobs:
+  build:
+    runs-on: ubuntu‑latest
+    steps:
+      - name: Checkout kernel source
+        uses: actions/checkout@v4
+
+      # 解压vpnhide‑main.zip
+      - name: Unzip module
+        run: |
+          cd drivers
+          unzip -o vpnhide-main.zip
+
+      # 把模块写入Kconfig、Makefile
+      - name: Inject module config
+        run: |
+          echo "source \"drivers/vpnhide-main/Kconfig\"" >> drivers/Kconfig
+          echo "obj-\$(CONFIG_VPNHIDE) += vpnhide-main/" >> drivers/Makefile
