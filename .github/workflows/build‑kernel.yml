@@ -14,12 +14,16 @@ jobs:
       - name: Checkout kernel source
         uses: actions/checkout@v4
 
-      # 改用固定版本Proton‑Clang，规避latest标签失效问题
-      - name: Download Proton Clang
-        uses: kdrag0n/proton-clang@v0.0.1
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y wget unzip mkbootimg
 
-      - name: Install mkbootimg
-        run: sudo apt update && sudo apt install -y mkbootimg
+      - name: Download Proton‑Clang
+        run: |
+          wget https://github.com/kdrag0n/proton-clang/releases/download/build-09062024/proton-clang-18.0.0-ubuntu.tar.zst
+          tar -I zstd -xf proton-clang-18.0.0-ubuntu.tar.zst
+          echo "$PWD/proton-clang/bin" >> $GITHUB_PATH
 
       - name: Compile Kernel
         env:
@@ -31,7 +35,7 @@ jobs:
 
       - name: Generate boot.img
         run: |
-          mkbootimg --kernel out/arch/arm64/boot/Image --ramdisk empty -o boot.img
+          mkbootimg --kernel out/arch/arm64/boot/Image -o boot.img
 
       - name: Upload boot.img
         uses: actions/upload-artifact@v4
