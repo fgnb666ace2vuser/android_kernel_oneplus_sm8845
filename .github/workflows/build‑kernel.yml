@@ -14,20 +14,27 @@ jobs:
       - name: Checkout full kernel source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 完整拉取全部代码，禁止浅克隆
+          fetch-depth: 0
 
-      - name: Install dependencies & aarch64‑gcc
+      - name: Install basic packages
         run: |
           sudo apt update
-          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu mkbootimg build-essential libssl-dev
+          sudo apt install -y wget unzip mkbootimg build-essential libssl-dev
+
+      - name: Download Google Clang r416183
+        run: |
+          wget https://dl.google.com/android/ndk/android-ndk-r25c-linux.zip
+          unzip -q android-ndk-r25c-linux.zip
+          echo "$PWD/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
       - name: Compile Kernel
         env:
           ARCH: arm64
           CROSS_COMPILE: aarch64-linux-gnu-
+          CLANG_TRIPLE: aarch64-linux-gnu-
         run: |
           make generic_auto_defconfig
-          make -j$(nproc)
+          make -j$(nproc) CC=clang
 
       - name: Generate boot.img
         run: |
