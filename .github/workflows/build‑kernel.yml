@@ -11,13 +11,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout kernel source
+      - name: Checkout full kernel source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 完整拉取全部代码，禁止浅克隆
 
       - name: Install dependencies & aarch64‑gcc
         run: |
           sudo apt update
-          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu mkbootimg
+          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu mkbootimg build-essential libssl-dev
 
       - name: Compile Kernel
         env:
