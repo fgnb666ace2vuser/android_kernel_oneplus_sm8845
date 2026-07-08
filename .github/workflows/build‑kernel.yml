@@ -1,0 +1,22 @@
+name: Build SM8845 Kernel
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Download Proton Clang
+        uses: kdrag0n/proton-clang@latest
+
+      - name: Build kernel
+        env:
+          ARCH: arm64
+          CROSS_COMPILE: aarch64-linux-gnu-
+        run: |
+          make generic_auto_defconfig
+          make -j$(nproc)
