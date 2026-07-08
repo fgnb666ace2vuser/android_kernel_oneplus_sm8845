@@ -14,16 +14,10 @@ jobs:
       - name: Checkout kernel source
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install dependencies & aarch64‑gcc
         run: |
           sudo apt update
-          sudo apt install -y wget unzip mkbootimg
-
-      - name: Download Proton‑Clang
-        run: |
-          wget https://github.com/kdrag0n/proton-clang/releases/download/build-09062024/proton-clang-18.0.0-ubuntu.tar.zst
-          tar -I zstd -xf proton-clang-18.0.0-ubuntu.tar.zst
-          echo "$PWD/proton-clang/bin" >> $GITHUB_PATH
+          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu mkbootimg
 
       - name: Compile Kernel
         env:
