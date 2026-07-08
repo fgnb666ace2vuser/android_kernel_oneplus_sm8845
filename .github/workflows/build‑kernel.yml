@@ -1,22 +1,39 @@
 name: Build SM8845 Kernel
 on:
   push:
-    branches: [ main ]
+    branches: [ oneplus/sm8845_b_16.0.0_ace_6t ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
+      - name: Checkout kernel source
         uses: actions/checkout@v4
 
       - name: Download Proton Clang
         uses: kdrag0n/proton-clang@latest
 
-      - name: Build kernel
+      - name: Install mkbootimg
+        run: sudo apt update && sudo apt install -y mkbootimg
+
+      - name: Compile Kernel
         env:
           ARCH: arm64
           CROSS_COMPILE: aarch64-linux-gnu-
         run: |
           make generic_auto_defconfig
           make -j$(nproc)
+
+      - name: Generate boot.img
+        run: |
+          mkbootimg --kernel out/arch/arm64/boot/Image --ramdisk empty -o boot.img
+
+      - name: Upload boot.img
+        uses: actions/upload-artifact@v4
+        with:
+          name: Compiled‑Boot
+          path: boot.img
