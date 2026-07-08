@@ -1,7 +1,8 @@
 name: Build SM8845 Kernel
+
 on:
   push:
-    branches: [ oneplus/sm8845_b_16.0.0_ace_6t ]
+    branches: [ oneplus/sm8845 ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -9,32 +10,75 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04   # 20.04 即将弃用，建议 22.04
+
     steps:
-      - name: Checkout full kernel source
+      - name: Checkout main kernel repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1   # 不需要历史记录时用 1 可以加速
 
-      - name: Install dependencies
+      - name: Pull common kernel source into common folder
+        run: |
+          git clone https://github.com/fgnb666ace2v/android_kernel_common_oneplus_sm8845 common
+          # 如果主仓库的 Makefile 期望 common 内容出现在根目录（如符号链接方式），
+          # 可以在此处添加相应的链接命令，例如：
+          # find common -maxdepth 1 -mindepth 1 -exec ln -sf ../{} . \;
+          # 但既然你的说明就是“放入 common 文件夹”，就先保持原样
+
+      - name: Pull devicetree & vendor files
+        run: |
+          git clone https://github.com/fgnb666ace2v/android_kernel_modules_and_devicetree_oneplus_sm8845 tempdt
+          cp -r tempdt/kernel_platform ./
+          cp -r tempdt/vendor ./
+          rm -rf tempdt
+
+      - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu mkbootimg build-essential libssl-dev
+          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+                              mkbootimg build-essential libssl-dev
 
-      - name: Compile Kernel
+      - name: Compile kernel
         env:
           ARCH: arm64
           CROSS_COMPILE: aarch64-linux-gnu-
+          # 如果内核需要 clang 编译（通常 5.x 以上推荐），请取消下面注释并安装 clang
+          # CC: clang
+          # LD: ld.lld
         run: |
           make generic_auto_defconfig
           make -j$(nproc)
 
       - name: Generate boot.img
         run: |
-          mkbootimg --kernel out/arch/arm64/boot/Image -o boot.img
+          # 创建占位 ramdisk（如果你的项目实际有 ramdisk，请替换为真实内容）
+          echo "placeholder" > ramdisk
 
-      - name: Upload boot.img
+          # 收集设备树文件（如果 defconfig 已编译出 dtb）
+          DTB_DIR="arch/arm64/boot/dts"
+          if [ -d "$DTB_DIR" ]; then
+            find "$DTB_DIR" -name "*.dtb" -exec cat {} + > dtb.img
+            DTB_ARG="--dt dtb.img"
+          else
+            DTB_ARG=""
+          fi
+
+          # 打包 boot.img，请务必根据你的设备填写正确的偏移地址、基地址等
+          mkbootimg \
+            --kernel arch/arm64/boot/Image \
+            --ramdisk ramdisk \
+            $DTB_ARG \
+            --output boot.img
+          # 常见需要补充的参数示例（需自行替换实际值）：
+          # --base 0x0
+          # --kernel_offset 0x00008000
+          # --ramdisk_offset 0x01000000
+          # --tags_offset 0x00000100
+          # --cmdline "console=ttyMSM0,115200n8 ..."
+
+      - name: Upload boot.img artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Compiled‑Boot
+          name: Compiled-Boot
           path: boot.img
