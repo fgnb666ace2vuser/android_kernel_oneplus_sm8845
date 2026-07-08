@@ -14,8 +14,9 @@ jobs:
       - name: Checkout kernel source
         uses: actions/checkout@v4
 
+      # 改用固定版本Proton‑Clang，规避latest标签失效问题
       - name: Download Proton Clang
-        uses: kdrag0n/proton-clang@latest
+        uses: kdrag0n/proton-clang@v0.0.1
 
       - name: Install mkbootimg
         run: sudo apt update && sudo apt install -y mkbootimg
