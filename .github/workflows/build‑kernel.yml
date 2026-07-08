@@ -9,32 +9,25 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout full kernel source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install basic packages
+      - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y wget unzip mkbootimg build-essential libssl-dev
-
-      - name: Download Google Clang r416183
-        run: |
-          wget https://dl.google.com/android/ndk/android-ndk-r25c-linux.zip
-          unzip -q android-ndk-r25c-linux.zip
-          echo "$PWD/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu mkbootimg build-essential libssl-dev
 
       - name: Compile Kernel
         env:
           ARCH: arm64
           CROSS_COMPILE: aarch64-linux-gnu-
-          CLANG_TRIPLE: aarch64-linux-gnu-
         run: |
           make generic_auto_defconfig
-          make -j$(nproc) CC=clang
+          make -j$(nproc)
 
       - name: Generate boot.img
         run: |
