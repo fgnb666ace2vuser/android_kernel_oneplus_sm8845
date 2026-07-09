@@ -36,14 +36,30 @@ jobs:
           sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu mkbootimg build-essential libssl-dev clang lld
 
       - name: Compile kernel
-        env:
-          ARCH: arm64
-          CROSS_COMPILE: aarch64-linux-gnu-
-          CC: clang
-          LD: ld.lld
-        run: |
-          make generic_auto_defconfig
-          make -j$(nproc)
+  env:
+    ARCH: arm64
+    CROSS_COMPILE: aarch64-linux-gnu-
+    CC: clang
+    LD: ld.lld
+  run: |
+    make generic_auto_defconfig
+    echo "CONFIG_KPM=y" >> .config
+    echo "CONFIG_KPM_HOOK=y" >> .config
+    echo "CONFIG_KPM_PROC_HOOK=y" >> .config
+    echo "CONFIG_KPM_DEBUG=n" >> .config
+    echo "CONFIG_KPM_ALLOW_UNSAFE_HOOK=y" >> .config
+    echo "CONFIG_KPROBES=y" >> .config
+    echo "CONFIG_KPROBE_EVENTS=y" >> .config
+    echo "CONFIG_FTRACE=y" >> .config
+    echo "CONFIG_FUNCTION_TRACER=y" >> .config
+    echo "CONFIG_EVENT_TRACING=y" >> .config
+    echo "CONFIG_DEBUG_FS=y" >> .config
+    echo "CONFIG_MODVERSIONS=y" >> .config
+    echo "CONFIG_MODULE_REL_CRCS=y" >> .config
+    echo "CONFIG_SECURITY_SELINUX_DEVELOP=y" >> .config
+    echo "CONFIG_SECURITY_SELINUX_PERMISSIVE=y" >> .config
+    make olddefconfig
+    make -j$(nproc)
 
       - name: Generate boot.img
         run: |
